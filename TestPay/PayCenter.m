@@ -30,8 +30,6 @@ return _sharedObject; \
 
 @implementation PayCenter
 
-//https://www.jianshu.com/p/bfa265971ce5
-
 + (PayCenter *)sharedInstance{
     //初始化单例类
     DEFINE_SHARED_INSTANCE_USING_BLOCK(^{
@@ -130,12 +128,31 @@ return _sharedObject; \
                 NSURL *receiptUrl = [[NSBundle mainBundle] appStoreReceiptURL];
                 NSData *receiptData = [NSData dataWithContentsOfURL:receiptUrl];//NSData 类型
                 NSString *receiptStr = [receiptData base64EncodedStringWithOptions:0];//转成NSString类型
-                //TODO:
-                //这里取得receipt，POST请求进行二次验证
+
+                //模拟沙箱环境二次验证，正式开发中需要将数据提交给服务器端验证
+                /* ------------------------------------Start------------------------------------ */
+                NSDictionary *requestContents = @{@"receipt-data": receiptStr};
+
+                NSError *error;
+                NSData *data = [NSJSONSerialization dataWithJSONObject:requestContents options:0 error:&error];
+
                 //沙箱验证地址：https://sandbox.itunes.apple.com/verifyReceipt
                 //正式打包验证地址：https://buy.itunes.apple.com/verifyReceipt
+                NSURL *receipt_url = [NSURL URLWithString:@"https://sandbox.itunes.apple.com/verifyReceipt"];
                 
-                
+                NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:receipt_url];
+                [request setHTTPMethod:@"POST"];
+                [request setHTTPBody:data];
+
+                [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+
+                    if(!error){
+
+                        NSLog(@"%@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+                        [[SKPaymentQueue defaultQueue] finishTransaction:transaction];
+                    }
+                }];
+                /* ------------------------------------End------------------------------------ */
             }
                 break;
                 
